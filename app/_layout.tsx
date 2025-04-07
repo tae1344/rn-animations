@@ -3,11 +3,18 @@ import * as SplashScreen from 'expo-splash-screen';
 import {StatusBar} from 'expo-status-bar';
 import 'react-native-reanimated';
 import {View} from "react-native";
+import { useEffect } from 'react';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+
+    useEffect(() => {
+        SplashScreen.hideAsync();
+    }, []);
+
+
     return (
         <View style={{flex: 1}}>
             <Stack
@@ -18,7 +25,6 @@ export default function RootLayout() {
                     },
                 }}
             >
-                <Stack.Screen name="index" />
                 <Stack.Screen name="home" />
                 <Stack.Screen name="+not-found" options={{headerShown: false}} />
             </Stack>

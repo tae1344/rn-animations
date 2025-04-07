@@ -1,9 +1,14 @@
-import React from 'react';
-import {Canvas, Circle} from '@shopify/react-native-skia';
-import {useSharedValue, useDerivedValue} from 'react-native-reanimated';
-import {Dimensions} from 'react-native';
+import React, { useEffect } from 'react';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withSequence,
+    withTiming
+} from 'react-native-reanimated';
+import Star from './Star';
 
-// Constants
 const SCREEN = {
     WIDTH: Dimensions.get('window').width,
     HEIGHT: Dimensions.get('window').height,
@@ -11,17 +16,15 @@ const SCREEN = {
 
 const STAR_CONFIG = {
     COUNT: 100,
-    MIN_RADIUS: 0.5,
-    MAX_RADIUS: 2,
-    MIN_SPEED: 0.2,
-    MAX_SPEED: 0.7,
-    MIN_OPACITY: 0.5,
+    MIN_RADIUS: 1,
+    MAX_RADIUS: 3,
+    MIN_SPEED: 4000,
+    MAX_SPEED: 6000,
+    MIN_OPACITY: 0.3,
     MAX_OPACITY: 1,
-    ANIMATION_DURATION: 3000,
 } as const;
 
-// Types
-interface Star {
+interface StarData {
     x: number;
     y: number;
     radius: number;
@@ -29,7 +32,7 @@ interface Star {
     opacity: number;
 }
 
-const generateStars = (): Star[] => {
+const generateStars = (): StarData[] => {
     return Array.from({length: STAR_CONFIG.COUNT}, () => ({
         x: Math.random() * SCREEN.WIDTH,
         y: Math.random() * SCREEN.HEIGHT,
@@ -40,45 +43,65 @@ const generateStars = (): Star[] => {
 };
 
 export const StarrySky: React.FC = () => {
-    const stars = useSharedValue<Star[]>(generateStars());
+    const stars = generateStars();
 
-    const animatedStars = useDerivedValue(() => {
-        'worklet';
-        const currentStars = [...stars.value];
-        const updatedStars = currentStars.map((star: Star) => {
-            const newY = star.y - star.speed;
-            
-            if (newY < 0) {
-                return {
-                    ...star,
-                    y: SCREEN.HEIGHT,
-                    x: Math.random() * SCREEN.WIDTH,
-                    opacity: Math.random() * (STAR_CONFIG.MAX_OPACITY - STAR_CONFIG.MIN_OPACITY) + STAR_CONFIG.MIN_OPACITY,
-                };
-            }
-            
-            return {
-                ...star,
-                y: newY,
-            };
-        });
-        
-        stars.value = updatedStars;
-        return updatedStars;
-    });
+    const offsetX = useSharedValue(SCREEN.WIDTH / 2 - 160);
+    const offsetY = useSharedValue(SCREEN.HEIGHT);
+
+    useEffect(() => {
+        offsetX.value = withRepeat(
+            withTiming(-offsetX.value, { duration: 1750 }),
+            -1,
+            true
+        );
+
+        offsetY.value = withRepeat(
+            withSequence(
+                withTiming(-offsetY.value, { duration: 5000 }),
+                withTiming(SCREEN.HEIGHT, { duration: 0 }),
+            ),
+            -1,
+            true
+        );
+    }, []);
+
+    const animatedStyle = useAnimatedStyle(() => ({
+        position: 'absolute',
+        top: 100,
+        left: 100,
+        backgroundColor: 'gold',
+        transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
+    }));
 
     return (
-        <Canvas style={{flex: 1, backgroundColor: 'black'}}>
-            {animatedStars.value.map((star: Star, index: number) => (
-                <Circle
+        <View style={styles.container}> 
+            <Animated.View style={[styles.star, animatedStyle]} />
+            
+            {stars.map((star, index) => (
+                <Star
                     key={index}
-                    cx={star.x}
-                    cy={star.y}
-                    r={star.radius}
-                    color="white"
+                    x={star.x}
+                    y={star.y}
+                    radius={star.radius}
                     opacity={star.opacity}
+                    speed={star.speed}
                 />
             ))}
-        </Canvas>
+        </View>
     );
 };
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: 'black',
+    },
+    star: {
+        position: 'absolute',
+        width: 5,
+        height: 5,
+        borderRadius: 5,
+        backgroundColor: 'white',
+        opacity: 1,
+    },
+});
